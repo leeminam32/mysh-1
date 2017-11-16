@@ -2,7 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-
+#include <unistd.h>
+#include <wait.h>
 #include "commands.h"
 #include "built_in.h"
 
@@ -29,7 +30,11 @@ static int is_built_in_command(const char* command_name)
  * Description: Currently this function only handles single built_in commands. You should modify this structure to launch process and offer pipeline functionality.
  */
 int evaluate_command(int n_commands, struct single_command (*commands)[512])
-{
+{	
+	char *argls[]={"ls",NULL};
+	char *argcat[]={"cat","etc/hosts",NULL};
+	char *argvim[]={"usr/bin/vim",NULL};
+	char *envir[] = {"PATH=usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",NULL};
   if (n_commands > 0) {
     struct single_command* com = (*commands);
 
@@ -49,7 +54,24 @@ int evaluate_command(int n_commands, struct single_command (*commands)[512])
       return 0;
     } else if (strcmp(com->argv[0], "exit") == 0) {
       return 1;
-    } else {
+    } 
+      else if(built_in_pos == -1){
+	int pid = fork();
+	if(pid == 0){
+	  if(strcmp("ls",com->argv[0])==0){
+		  execve("/bin/ls",argls,envir);
+		}
+	  else if(strcmp("cat", com->argv[0]) == 0){
+		  execve("/bin/cat",argcat,envir);		
+		}
+	  else if(strcmp("vim", com->argv[0]) == 0){
+		  execve("usr/bin/vim", argvim, envir);
+		}
+	  else execv(com->argv[0], com->argv);		
+	}
+	else wait(NULL);
+}
+	else {
       fprintf(stderr, "%s: command not found\n", com->argv[0]);
       return -1;
     }
